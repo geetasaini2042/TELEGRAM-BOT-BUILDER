@@ -12,7 +12,7 @@ app = FastAPI(title="Multi-Bot Manager")
 BOTS_FILE = "bots.json"
 BOT_DATA_FOLDER = "BOT_DATA"
 os.makedirs(BOT_DATA_FOLDER, exist_ok=True)
-
+PUBLIC_URL = "https://telegram-bot-builder.onrender.com"
 # -------------------------
 # ⚙️ Utility Functions
 # -------------------------
@@ -73,7 +73,6 @@ async def add_bot(request: Request):
             )
 
     # Set webhook for this bot
-    PUBLIC_URL = "https://scaling-acorn-r4wqw95jwg54cx9rv-8000.app.github.dev"
     WEBHOOK_URL = f"{PUBLIC_URL}/webhook/{token}"
 
     try:
@@ -239,7 +238,7 @@ async def telegram_webhook(token: str, request: Request):
 # -------------------------
 @app.on_event("startup")
 async def on_startup():
-    PUBLIC_URL = "https://scaling-acorn-r4wqw95jwg54cx9rv-8000.app.github.dev"
+
     bots = load_bots()
     for name, info in bots.items():
         token = info["token"]
