@@ -1,5 +1,5 @@
 import os
-
+from dotenv import load_dotenv
 load_dotenv()
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://127.0.0.1:8000")
 
