@@ -6,7 +6,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Update
 import uvicorn
+from fastapi import FastAPI, Request
 
+
+import bot_setup  # handlers module
 from script import app, load_bots, save_bots, get_bot_id, load_bot_config
 from common_data import BOT_DATA_FOLDER, PUBLIC_URL
 # -------------------------
@@ -98,52 +101,31 @@ async def save_file(bot_token: str, content: str = Form(...)):
 # -------------------------
 # 🤖 Webhook Receiver
 # -------------------------
+
+dp_dict = {}
+bot_dict = {}
+
 @app.post("/webhook/{token}")
 async def telegram_webhook(token: str, request: Request):
     data = await request.json()
-    bots = load_bots()
-    bot_info = next(((name, info) for name, info in bots.items() if info["token"] == token), None)
 
-    if not bot_info:
-        return {"ok": False, "error": "Unknown bot"}
-
-    bot_name, info = bot_info
-    bot_id = get_bot_id(token)
-    bot_config = load_bot_config(bot_id)
-
-    bot = Bot(token=token)
-    dp = Dispatcher()
-
-    @dp.message(Command(commands=["start"]))
-    async def start_handler(message: types.Message):
-        await message.answer(bot_config.get("start_msg", "Hello!"))
-
-    for cmd_name, reply_text in bot_config.get("commands", {}).items():
-        def gen_handler(text):
-            async def handler(message: types.Message):
-                await message.answer(text)
-            return handler
-        dp.message(Command(commands=[cmd_name]))(gen_handler(reply_text))
-
-    @dp.message()
-    async def keyword_reply(message: types.Message):
-        text = message.text.lower().strip()
-        for key, reply in bot_config.get("keywords", {}).items():
-            if key.lower() in text:
-                await message.answer(reply)
-                break
+    if token not in dp_dict:
+        bot = Bot(token=token)
+        dp = Dispatcher()
+        bot_setup.setup_handlers(dp)  # handlers top-level
+        dp_dict[token] = dp
+        bot_dict[token] = bot
+    else:
+        bot = bot_dict[token]
+        dp = dp_dict[token]
 
     try:
         update = Update(**data)
         await dp.feed_update(bot, update)
     except Exception as e:
-        print(f"⚠️ Webhook error for {bot_name}: {e}")
-    finally:
-        await bot.session.close()
+        print(f"⚠️ Webhook error for {token}: {e}")
 
     return {"ok": True}
-
-
 # -------------------------
 # Startup/Shutdown
 # -------------------------
