@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 
 
-import bot_setup  # handlers module
+# handlers module
 from script import app, load_bots, save_bots, get_bot_id, load_bot_config
 from common_data import BOT_DATA_FOLDER, PUBLIC_URL
 # -------------------------
@@ -112,7 +112,8 @@ async def telegram_webhook(token: str, request: Request):
     if token not in dp_dict:
         bot = Bot(token=token)
         dp = Dispatcher()
-        bot_setup.setup_handlers(dp)  # handlers top-level
+        from bot_setup import setup_handlers
+        setup_handlers(dp)  # handlers top-level
         dp_dict[token] = dp
         bot_dict[token] = bot
     else:
