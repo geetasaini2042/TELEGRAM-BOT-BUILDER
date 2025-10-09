@@ -1,47 +1,14 @@
 import os
 import json
-import uvicorn
-from fastapi import FastAPI, Request, Form
+from fastapi import Request, Form
 from fastapi.responses import HTMLResponse
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Update
+import uvicorn
 
-app = FastAPI(title="Multi-Bot Manager")
-
-BOTS_FILE = "bots.json"
-BOT_DATA_FOLDER = "BOT_DATA"
-os.makedirs(BOT_DATA_FOLDER, exist_ok=True)
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# 🔹 Env से लो, अगर ना हो तो default use करो
-PUBLIC_URL = os.getenv("PUBLIC_URL", "https://telegram-bot-builder.onrender.com")
-
-print(PUBLIC_URL)
-def load_bots():
-    if os.path.exists(BOTS_FILE):
-        with open(BOTS_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_bots(data):
-    with open(BOTS_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-def get_bot_id(token: str) -> str:
-    """Return numeric prefix from token (e.g. 123456 from 123456:ABC...)"""
-    return token.split(":")[0] if ":" in token else token
-
-def load_bot_config(bot_id):
-    path = os.path.join(BOT_DATA_FOLDER, f"{bot_id}.json")
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            return json.load(f)
-    return {"start_msg": "Hello! I am your bot 🤖", "commands": {}, "keywords": {}}
-
-
+from script import app, load_bots, save_bots, get_bot_id, load_bot_config
+from common_data BOT_DATA_FOLDER, PUBLIC_URL
 # -------------------------
 # ➕ Add New Bot
 # -------------------------
@@ -61,7 +28,6 @@ async def add_bot(request: Request):
     bots[bot_name] = {"token": token}
     save_bots(bots)
 
-    # Create bot config file
     bot_id = get_bot_id(token)
     config_path = os.path.join(BOT_DATA_FOLDER, f"{bot_id}.json")
     if not os.path.exists(config_path):
@@ -76,9 +42,7 @@ async def add_bot(request: Request):
                 indent=2
             )
 
-    # Set webhook for this bot
     WEBHOOK_URL = f"{PUBLIC_URL}/webhook/{token}"
-
     try:
         new_bot = Bot(token=token)
         await new_bot.delete_webhook(drop_pending_updates=True)
@@ -91,83 +55,31 @@ async def add_bot(request: Request):
 
 
 # -------------------------
-# ✏️ Edit Bot JSON via HTML
+# ✏️ Edit & Save File Endpoints
 # -------------------------
 @app.get("/edit-file/{bot_token}", response_class=HTMLResponse)
 async def edit_file(bot_token: str):
     bots = load_bots()
-    valid_bot = None
-    for name, info in bots.items():
-        if info["token"] == bot_token:
-            valid_bot = info
-            break
+    valid_bot = next((info for name, info in bots.items() if info["token"] == bot_token), None)
     if not valid_bot:
         return HTMLResponse("<h3 style='color:red'>❌ Invalid Bot Token</h3>")
 
     bot_id = get_bot_id(bot_token)
     file_path = os.path.join(BOT_DATA_FOLDER, f"{bot_id}.json")
-
     if not os.path.exists(file_path):
         return HTMLResponse("<h3 style='color:red'>⚠️ Bot data file not found.</h3>")
 
     with open(file_path, "r") as f:
         file_content = f.read()
 
-    html = f"""
-    <html>
-    <head>
-        <title>Edit Bot File - {bot_id}</title>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #f4f4f4;
-                padding: 20px;
-            }}
-            textarea {{
-                width: 100%;
-                height: 70vh;
-                font-family: monospace;
-                font-size: 14px;
-                border-radius: 8px;
-                border: 1px solid #ccc;
-                padding: 10px;
-                resize: vertical;
-            }}
-            button {{
-                background: #0084ff;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 16px;
-            }}
-            button:hover {{ background: #005fcc; }}
-        </style>
-    </head>
-    <body>
-        <h2>📝 Edit Config for Bot ID: {bot_id}</h2>
-        <form method="post" action="/save-file/{bot_token}">
-            <textarea name="content">{file_content}</textarea><br><br>
-            <button type="submit">💾 Save Changes</button>
-        </form>
-    </body>
-    </html>
-    """
+    html = f"""<html> ... <textarea name="content">{file_content}</textarea> ... </html>"""
     return HTMLResponse(html)
 
 
-# -------------------------
-# 💾 Save Edited File
-# -------------------------
 @app.post("/save-file/{bot_token}")
 async def save_file(bot_token: str, content: str = Form(...)):
     bots = load_bots()
-    valid_bot = None
-    for name, info in bots.items():
-        if info["token"] == bot_token:
-            valid_bot = info
-            break
+    valid_bot = next((info for name, info in bots.items() if info["token"] == bot_token), None)
     if not valid_bot:
         return HTMLResponse("<h3 style='color:red'>❌ Invalid Bot Token</h3>")
 
@@ -175,7 +87,7 @@ async def save_file(bot_token: str, content: str = Form(...)):
     file_path = os.path.join(BOT_DATA_FOLDER, f"{bot_id}.json")
 
     try:
-        json.loads(content)  # validate JSON
+        json.loads(content)
         with open(file_path, "w") as f:
             f.write(content)
         return HTMLResponse("<h3 style='color:green'>✅ Changes saved successfully!</h3>")
@@ -184,23 +96,18 @@ async def save_file(bot_token: str, content: str = Form(...)):
 
 
 # -------------------------
-# 🤖 Webhook Receiver (same as before)
+# 🤖 Webhook Receiver
 # -------------------------
 @app.post("/webhook/{token}")
 async def telegram_webhook(token: str, request: Request):
     data = await request.json()
     bots = load_bots()
+    bot_info = next(((name, info) for name, info in bots.items() if info["token"] == token), None)
 
-    bot_info = None
-    bot_name = None
-    for name, info in bots.items():
-        if info["token"] == token:
-            bot_info = info
-            bot_name = name
-            break
     if not bot_info:
         return {"ok": False, "error": "Unknown bot"}
 
+    bot_name, info = bot_info
     bot_id = get_bot_id(token)
     bot_config = load_bot_config(bot_id)
 
@@ -242,7 +149,6 @@ async def telegram_webhook(token: str, request: Request):
 # -------------------------
 @app.on_event("startup")
 async def on_startup():
-
     bots = load_bots()
     for name, info in bots.items():
         token = info["token"]
@@ -255,7 +161,6 @@ async def on_startup():
             print(f"✅ Webhook set for {name}: {WEBHOOK_URL}")
         except Exception as e:
             print(f"⚠️ Failed to set webhook for {name}: {e}")
-
 
 @app.on_event("shutdown")
 async def on_shutdown():
