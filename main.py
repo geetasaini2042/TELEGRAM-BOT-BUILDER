@@ -8,7 +8,7 @@ from aiogram.types import Update
 import uvicorn
 
 from script import app, load_bots, save_bots, get_bot_id, load_bot_config
-from common_data BOT_DATA_FOLDER, PUBLIC_URL
+from common_data import BOT_DATA_FOLDER, PUBLIC_URL
 # -------------------------
 # ➕ Add New Bot
 # -------------------------
