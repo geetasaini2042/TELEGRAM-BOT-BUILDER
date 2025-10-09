@@ -102,6 +102,10 @@ async def save_file(bot_token: str, content: str = Form(...)):
 # 🤖 Webhook Receiver
 # -------------------------
 
+# main.py
+from bot_setup import setup_handlers
+
+
 dp_dict = {}
 bot_dict = {}
 
@@ -112,10 +116,10 @@ async def telegram_webhook(token: str, request: Request):
     if token not in dp_dict:
         bot = Bot(token=token)
         dp = Dispatcher()
-        from bot_setup import setup_handlers
-        setup_handlers(dp)  # handlers top-level
+        setup_handlers(dp)  # ✅ handlers register karo
         dp_dict[token] = dp
         bot_dict[token] = bot
+        print(f"✅ Dispatcher created for {token}")
     else:
         bot = bot_dict[token]
         dp = dp_dict[token]
