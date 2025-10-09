@@ -13,17 +13,13 @@ BOTS_FILE = "bots.json"
 BOT_DATA_FOLDER = "BOT_DATA"
 os.makedirs(BOT_DATA_FOLDER, exist_ok=True)
 from dotenv import load_dotenv
-import os
 
-# 🔹 .env लोड करो
 load_dotenv()
 
-# 🔹 PUBLIC_URL पढ़ो
-PUBLIC_URL = os.getenv("PUBLIC_URL")
+# 🔹 Env से लो, अगर ना हो तो default use करो
+PUBLIC_URL = os.getenv("PUBLIC_URL", "https://telegram-bot-builder.onrender.com")
 
-print(PUBLIC_URL)  # टेस्ट के लिए
-# ⚙️ Utility Functions
-# -------------------------
+print(PUBLIC_URL)
 def load_bots():
     if os.path.exists(BOTS_FILE):
         with open(BOTS_FILE, "r") as f:
