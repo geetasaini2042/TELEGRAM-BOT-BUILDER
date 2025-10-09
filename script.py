@@ -2,16 +2,13 @@ import os
 import json
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from common_data import BOTS_FILE, BASE_PATH, BOT_DATA_FOLDER
+from common_data import BOTS_FILE, BASE_PATH, BOT_DATA_FOLDER, PUBLIC_URL
+
 # -------------------------
 # 🔹 Setup folders & env
 # -------------------------
 #BOTS_FILE = "bots.json"
 #BOT_DATA_FOLDER = "BOT_DATA"
-
-
-load_dotenv()
-PUBLIC_URL = os.getenv("PUBLIC_URL", "https://telegram-bot-builder.onrender.com")
 
 # -------------------------
 # 🔹 FastAPI app
